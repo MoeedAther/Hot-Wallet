@@ -68,7 +68,7 @@ export class BlockchainService {
     }
 
 
-    async sweepNativeFunds(senderPrivateKey: string, amount: number, chain: NetworkType) {
+    async sweepNativeFunds(senderPrivateKey: string, chain: NetworkType) {
         switch (chain) {
             case NetworkType.ETHEREUM:
             case NetworkType.POLYGON:
@@ -81,13 +81,13 @@ export class BlockchainService {
             case NetworkType.XRP:
                 return this.xrplService.xrpTransfer(senderPrivateKey);
             case NetworkType.BITCOIN:
-                return this.btcService.btcTransfer(senderPrivateKey, amount);
+                return this.btcService.btcTransfer(senderPrivateKey);
             default:
                 throw new BadRequestException(`Unsupported chain: ${chain}`);
         }
     }
 
-    async sweepTokenFunds(senderPrivateKey: string, tokenAddress: string, amount: number, chain: NetworkType) {
+    async sweepTokenFunds(senderPrivateKey: string, tokenAddress: string, chain: NetworkType) {
         switch (chain) {
             case NetworkType.ETHEREUM:
             case NetworkType.POLYGON:

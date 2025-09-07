@@ -47,14 +47,12 @@ export class TransactionsService {
       if (createTxDto.coin.isNative) {
         await this.blockchainService.sweepNativeFunds(
           this.cryptoUtility.decrypt(createTxDto.account.privateKey),
-          createTxDto.value,
           createTxDto.chain
         );
       } else {
         await this.blockchainService.sweepTokenFunds(
           this.cryptoUtility.decrypt(createTxDto.account.privateKey),
           createTxDto.coin.address!,
-          createTxDto.value,
           createTxDto.chain
         );
       }
