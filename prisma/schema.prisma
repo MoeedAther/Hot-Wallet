@@ -7,20 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id           String        @id @default(cuid())
-  username     String
-  email        String        @unique
-  password     String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  accounts     Account[]
-  balances     Balance[]
-  transactions Transaction[]
-
-  @@map("users")
-}
-
 model Account {
   id           String        @id @default(cuid())
   userId       String
@@ -29,7 +15,6 @@ model Account {
   privateKey   String        @db.Text
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   balances     Balance[]
   transactions Transaction[]
 
@@ -76,7 +61,6 @@ model Transaction {
   updatedAt   DateTime @updatedAt
   account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   coin        Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([fromAddress])
   @@index([toAddress])
@@ -99,7 +83,6 @@ model Balance {
   updatedAt DateTime @updatedAt
   account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   coin      Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, accountId, coinId])
   @@index([userId])
