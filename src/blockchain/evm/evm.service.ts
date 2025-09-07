@@ -203,8 +203,6 @@ export class EvmService {
         switch (chain) {
             case NetworkType.ETHEREUM:
                 return this.configService.evm.rpc.ethereum;
-            case NetworkType.SEPOLIA:
-                return this.configService.evm.rpc.sepolia;
             case NetworkType.BINANCE_SMART_CHAIN:
                 return this.configService.evm.rpc.bsc;
             case NetworkType.POLYGON:

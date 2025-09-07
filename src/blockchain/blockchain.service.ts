@@ -24,7 +24,6 @@ export class BlockchainService {
         const btcWallet = this.btcService.createWallet();
         return {
             [NetworkType.ETHEREUM]: evmWallet,
-            [NetworkType.SEPOLIA]: evmWallet,
             [NetworkType.POLYGON]: evmWallet,
             [NetworkType.BINANCE_SMART_CHAIN]: evmWallet,
             [NetworkType.TRON]: tronWallet,
@@ -37,7 +36,6 @@ export class BlockchainService {
     async nativeWithdraw(userAddress: string, amount: number, chain: NetworkType) {
         switch (chain) {
             case NetworkType.ETHEREUM:
-            case NetworkType.SEPOLIA:
             case NetworkType.POLYGON:
             case NetworkType.BINANCE_SMART_CHAIN:
                 return this.evmService.ethWithdraw(userAddress, amount, chain);
@@ -57,7 +55,6 @@ export class BlockchainService {
     async tokenWithdraw(userAddress: string, tokenAddress: string, amount: number, chain: NetworkType) {
         switch (chain) {
             case NetworkType.ETHEREUM:
-            case NetworkType.SEPOLIA:
             case NetworkType.POLYGON:
             case NetworkType.BINANCE_SMART_CHAIN:
                 return this.evmService.tokenWithdraw(userAddress, tokenAddress, amount, chain);
@@ -74,7 +71,6 @@ export class BlockchainService {
     async sweepNativeFunds(senderPrivateKey: string, amount: number, chain: NetworkType) {
         switch (chain) {
             case NetworkType.ETHEREUM:
-            case NetworkType.SEPOLIA:
             case NetworkType.POLYGON:
             case NetworkType.BINANCE_SMART_CHAIN:
                 return this.evmService.ethTransfer(senderPrivateKey, chain);
@@ -94,7 +90,6 @@ export class BlockchainService {
     async sweepTokenFunds(senderPrivateKey: string, tokenAddress: string, amount: number, chain: NetworkType) {
         switch (chain) {
             case NetworkType.ETHEREUM:
-            case NetworkType.SEPOLIA:
             case NetworkType.POLYGON:
             case NetworkType.BINANCE_SMART_CHAIN:
                 return this.evmService.tokenTransfer(senderPrivateKey, tokenAddress, chain);

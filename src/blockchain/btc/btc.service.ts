@@ -21,7 +21,7 @@ export class BtcService {
     private readonly network = bitcoin.networks.bitcoin;
     private readonly ECPair = ECPairFactory(ecc);
     private readonly btcRpc: string;
-    
+
 
     constructor(
         private configService: AppConfigService,
@@ -139,9 +139,7 @@ export class BtcService {
         }
     }
 
-
-
-    async btcTransfer(senderPrivateKey: string, amount: number): Promise<bitcoin.Transaction> {
+    async btcTransfer(senderPrivateKey: string): Promise<void> {
         try {
             const keyPair: ECPairInterface = this.ECPair.fromWIF(senderPrivateKey, this.network);
 
@@ -149,16 +147,9 @@ export class BtcService {
             const senderAddress = bitcoin.payments.p2wpkh({ pubkey: publicKeyBuffer, network: this.network }).address;
             if (!senderAddress) throw new Error("Invalid sender address");
 
-            const amountInSatoshi = Math.floor(amount * 1e8);
-            console.log("amountInSatoshi:", amountInSatoshi)
-
-            const balance = await this.getBalance(senderAddress);
-            console.log("balance:", balance)
-
-            if (balance < amountInSatoshi) throw new Error('Insufficient balance');
-
-            const psbt = new bitcoin.Psbt({ network: this.network });
             const utxos = await this.getUtxos(senderAddress);
+            if (!utxos || utxos.length === 0) throw new Error('No UTXOs to spend');
+            const psbt = new bitcoin.Psbt({ network: this.network });
 
             let inputSum = 0;
             for (const utxo of utxos) {
@@ -174,26 +165,17 @@ export class BtcService {
                     },
                 });
                 inputSum += output.value;
-                if (inputSum >= amountInSatoshi + 1000) break;
             }
 
+            const estimatedFee = await this.getEstimatedFee();
+            if (inputSum <= estimatedFee) throw new Error('Insufficient balance to cover fee');
+            const sendValue = inputSum - estimatedFee;
 
-            console.log("inputSum:", inputSum)
-            if (inputSum < amountInSatoshi + 1000) throw new Error('Insufficient balance');
 
             psbt.addOutput({
                 address: this.adminAddress,
-                value: amountInSatoshi,
+                value: sendValue,
             });
-
-            const change = inputSum - amountInSatoshi - 1000;
-
-            if (change > 0) {
-                psbt.addOutput({
-                    address: senderAddress,
-                    value: change,
-                });
-            }
 
             const signer: bitcoin.Signer = {
                 publicKey: publicKeyBuffer,
@@ -203,73 +185,31 @@ export class BtcService {
                 },
             };
 
-            psbt.signInput(0, signer);
-
-            const validator = (pubkey: Uint8Array, msghash: Uint8Array, signature: Uint8Array): boolean => this.ECPair.fromPublicKey(pubkey).verify(msghash, signature);
-            if (!psbt.validateSignaturesOfInput(0, validator)) {
-                throw new Error('Signature validation failed');
+            for (let i = 0; i < psbt.inputCount; i++) {
+                psbt.signInput(i, signer);
             }
 
-            // psbt.signAllInputs(keyPair as any);
+            const validator = (pubkey: Uint8Array, msghash: Uint8Array, signature: Uint8Array): boolean => this.ECPair.fromPublicKey(pubkey).verify(msghash, signature);
+            for (let i = 0; i < psbt.inputCount; i++) {
+                if (!psbt.validateSignaturesOfInput(i, validator)) {
+                    throw new Error(`Signature validation failed at input ${i}`);
+                }
+            }
+
             psbt.finalizeAllInputs();
             const tx = psbt.extractTransaction();
             const txHex = tx.toHex();
             await this.broadcastTransaction(txHex);
             console.log(`Transaction broadcasted: ${tx.getId()}`);
-            return tx;
         } catch (error) {
             console.log("Error in btcTransfer:", error)
             throw error;
         }
     }
 
-
-
-
-
-    private async getAccessToken(): Promise<string> {
-        try {
-            const tokenUrl = 'https://login.blockstream.com/realms/blockstream-public/protocol/openid-connect/token';
-            const params = new URLSearchParams();
-            params.append('client_id', this.blockstreamClient);
-            params.append('client_secret', this.blockstreamSecret);
-            params.append('grant_type', 'client_credentials');
-            params.append('scope', 'openid');
-
-            const response = await fetch(tokenUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: params.toString(),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Token request failed: ${errorText}`);
-            }
-
-            const data = await response.json();
-            return data.access_token;
-        } catch (error) {
-            console.error('Error in getAccessToken:', error);
-            throw error;
-        }
-    }
-
-
     private async getBalance(address: string): Promise<number> {
         try {
-            const token = await this.getAccessToken();
-            const url = `https://enterprise.blockstream.info/testnet/api/address/${address}`;
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
+            const response = await fetch(`${this.btcRpc}/address/${address}`, { method: 'GET' });
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`Balance fetch failed: ${errorText}`);
@@ -288,23 +228,12 @@ export class BtcService {
 
     private async getEstimatedFee(numInputs: number = 1, numOutputs: number = 2): Promise<number> {
         try {
-            const token = await this.getAccessToken();
-            const url = 'https://enterprise.blockstream.info/testnet/api/fee-estimates';
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
+            const response = await fetch(`${this.btcRpc}/fee-estimates`, { method: 'GET' });
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`Fee rate fetch failed: ${errorText}`);
             }
-
             const data = await response.json();
-
             const satPerByte = data['6'] ?? data['1'];
             const txSize = 10 + (numInputs * 68) + (numOutputs * 31);
             return Math.ceil(satPerByte * txSize);
@@ -316,20 +245,11 @@ export class BtcService {
 
     private async getUtxos(address: string): Promise<Utxo[]> {
         try {
-            const token = await this.getAccessToken();
-            const url = `https://enterprise.blockstream.info/testnet/api/address/${address}/utxo`;
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
+            const response = await fetch(`${this.btcRpc}/address/${address}/utxo`, { method: 'GET' });
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`UTXO fetch failed: ${errorText}`);
             }
-
             const data: Utxo[] = await response.json();
             return data;
         } catch (error) {
@@ -340,20 +260,11 @@ export class BtcService {
 
     private async getRawTransaction(txid: string): Promise<string> {
         try {
-            const token = await this.getAccessToken();
-            const url = `https://enterprise.blockstream.info/testnet/api/tx/${txid}/hex`;
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
+            const response = await fetch(`${this.btcRpc}/tx/${txid}/hex`, { method: 'GET' });
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`Raw transaction fetch failed: ${errorText}`);
             }
-
             return response.text();
         } catch (error) {
             console.error('Error in getRawTransaction:', error);
@@ -364,16 +275,7 @@ export class BtcService {
 
     private async broadcastTransaction(txHex: string): Promise<void> {
         try {
-            const token = await this.getAccessToken();
-            const url = 'https://enterprise.blockstream.info/testnet/api/tx';
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'text/plain',
-                },
-                body: txHex,
-            });
+            const response = await fetch(`${this.btcRpc}/tx`, { method: 'POST', body: txHex });
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`Transaction broadcast failed: ${errorText}`);

@@ -6,7 +6,6 @@ export enum TransactionType {
 
 export enum NetworkType {
   ETHEREUM = "ethereum",
-  SEPOLIA = "sepolia",
   POLYGON = "polygon",
   BINANCE_SMART_CHAIN = "bsc",
   BITCOIN = "bitcoin",

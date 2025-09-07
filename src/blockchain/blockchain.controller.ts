@@ -35,17 +35,6 @@ export class BlockchainController {
         private readonly btcService: BtcService,
     ) {}
 
-    @Post(NetworkType.SEPOLIA)
-    @HttpCode(200)
-    async handleSepolia(@Body() payload: WebhookPayload) {
-        this.logger.log('Received webhook for SEPOLIA', JSON.stringify(payload.transfers, null, 2));
-        if (Array.isArray(payload.transfers) && payload.transfers.length > 0) {
-            for (const transfer of payload.transfers) {
-                await this.evmService.processTransfers(transfer, NetworkType.SEPOLIA);
-            }
-        }
-        return { ok: true };
-    }
 
     @Post(NetworkType.ETHEREUM)
     @HttpCode(200)

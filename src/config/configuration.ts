@@ -11,7 +11,6 @@ export const validationSchema = Joi.object({
   EVM_ADMIN: Joi.string().required(),
   EVM_ADMIN_SK: Joi.string().required(),
   ETHEREUM_RPC: Joi.string().uri().required(),
-  SEPOLIA_RPC: Joi.string().uri().required(),
   POLYGON_RPC: Joi.string().uri().required(),
   BSC_RPC: Joi.string().uri().required(),
 
@@ -50,7 +49,6 @@ export default () => ({
     adminSk: process.env.EVM_ADMIN_SK!,
     rpc: {
       ethereum: process.env.ETHEREUM_RPC!,
-      sepolia: process.env.SEPOLIA_RPC!,
       polygon: process.env.POLYGON_RPC!,
       bsc: process.env.BSC_RPC!,
     }

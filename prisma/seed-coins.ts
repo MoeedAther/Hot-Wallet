@@ -181,20 +181,10 @@ async function main() {
             "symbol": "MTK",
             "address": "0x504C56184d8f955a65795203F65c9254bc002009",
             "decimals": 18,
-            "chain": "sepolia",
+            "chain": "ethereum",
             "isNative": false,
             "withdrawFeeInUsd": 0.0002,
             "wrappedAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7"
-        },
-        {
-            "name": "Sepolia Ether",
-            "symbol": "SEP",
-            "decimals": 18,
-            "chain": "sepolia",
-            "isNative": true,
-            "withdrawFeeInUsd": 0.0002,
-            "wrappedAddress": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-            "address": null
         },
         {
             "name": "SPL Token",
