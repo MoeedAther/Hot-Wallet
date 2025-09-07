@@ -1,0 +1,255 @@
+async function main(payload) {
+  const { data, metadata } = payload;
+
+  const transfers = [];
+
+  for (const blockData of data) {
+    const block = blockData.block;
+    const transactions = block.transactions || [];
+    const receipts = blockData.receipts || [];
+
+    for (const tx of transactions) {
+      const from = tx.from?.toLowerCase();
+      const to = tx.to ? tx.to.toLowerCase() : null;
+      const value = tx.value && tx.value !== "0x" ? BigInt(tx.value) : 0n;
+
+      if (value > 0n) {
+        const fromIsUser = await qnLib.qnContainsListItem("user_addresses", from);
+        const toIsUser = to ? await qnLib.qnContainsListItem("user_addresses", to) : false;
+
+        if (fromIsUser || toIsUser) {
+          transfers.push({
+            type: "native",
+            hash: tx.hash,
+            from,
+            to,
+            value: value.toString(),
+            blockNumber: parseInt(block.number, 16),
+            timestamp: parseInt(block.timestamp, 16),
+          });
+        }
+      }
+    }
+
+    for (const receipt of receipts) {
+      const txHash = receipt.transactionHash;
+      const logs = receipt.logs || [];
+
+      for (const log of logs) {
+        if (log.topics && log.topics[0].toLowerCase() === "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef".toLowerCase()) {
+          const token = log.address.toLowerCase();
+          const logFrom = ("0x" + log.topics[1].slice(-40)).toLowerCase();
+          const logTo = ("0x" + log.topics[2].slice(-40)).toLowerCase();
+          const logValue = log.data && log.data !== "0x" ? BigInt(log.data).toString() : "0";
+
+          const fromIsUser = await qnLib.qnContainsListItem("user_addresses", logFrom);
+          const toIsUser = await qnLib.qnContainsListItem("user_addresses", logTo);
+
+          if (fromIsUser || toIsUser) {
+            transfers.push({
+              type: "custom",
+              hash: txHash,
+              token,
+              from: logFrom,
+              to: logTo,
+              value: logValue,
+              blockNumber: parseInt(block.number, 16),
+              timestamp: parseInt(block.timestamp, 16),
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return transfers.length > 0 ? { transfers, metadata } : null;
+}
+
+
+########################################################### BITCOIN ###################################
+
+async function main(payload) {
+  const { data, metadata } = payload;
+  const transfers = [];
+
+  for (const blockData of data) {
+    const transactions = blockData.txs || [];
+    const blockHeight = blockData.height;
+    const blockTime = blockData.time;
+
+    for (const tx of transactions) {
+      const txid = tx.txid;
+      const vin = tx.vin || [];
+      const vout = tx.vout || [];
+      const value = parseInt(tx.value || "0");
+
+      if (value <= 0) continue;
+
+      let fromAddresses = [];
+      for (const input of vin) {
+        if (input.isAddress && input.addresses && input.addresses.length > 0) {
+          fromAddresses.push(...input.addresses.map(addr => addr.toLowerCase()));
+        }
+      }
+
+      let toAddresses = [];
+      for (const output of vout) {
+        if (output.isAddress && output.addresses && output.addresses.length > 0) {
+          toAddresses.push(...output.addresses.map(addr => addr.toLowerCase()));
+        }
+      }
+
+      let fromIsUser = false;
+      let toIsUser = false;
+
+      for (const addr of fromAddresses) {
+        if (await qnLib.qnContainsListItem("user_addresses", addr)) {
+          fromIsUser = true;
+          break;
+        }
+      }
+
+      for (const addr of toAddresses) {
+        if (await qnLib.qnContainsListItem("user_addresses", addr)) {
+          toIsUser = true;
+          break;
+        }
+      }
+
+      if (fromIsUser || toIsUser) {
+        for (const output of vout) {
+          if (output.isAddress && output.addresses && output.addresses.length > 0 && parseInt(output.value) > 0) {
+            const toAddr = output.addresses[0].toLowerCase();
+            transfers.push({
+              type: "native",
+              hash: txid,
+              from: fromAddresses.length > 0 ? fromAddresses[0] : null,
+              to: toAddr,
+              value: output.value.toString(),
+              blockNumber: blockHeight,
+              timestamp: blockTime,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return transfers.length > 0 ? { transfers, metadata } : null;
+}
+
+########################################################### RIPPLE ###################################
+
+async function main(payload) {
+  const { data, metadata } = payload;
+  const transfers = [];
+
+  const ledger = data[0].ledger;
+  const transactions = ledger.transactions || [];
+
+  for (const tx of transactions) {
+    if (tx.TransactionType !== "Payment") continue;
+
+    const txMeta = tx.metaData || {};
+    if (txMeta.TransactionResult !== "tesSUCCESS") continue;
+
+    const deliveredAmount = txMeta.delivered_amount || txMeta.DeliveredAmount;
+    if (!deliveredAmount || typeof deliveredAmount !== "string") continue;
+
+    const from = tx.Account.toLowerCase();
+    const to = tx.Destination ? tx.Destination.toLowerCase() : null;
+    const value = deliveredAmount;
+
+    if (!to) continue;
+
+    const fromIsUser = await qnLib.qnContainsListItem("user_addresses", from);
+    const toIsUser = await qnLib.qnContainsListItem("user_addresses", to);
+
+    if (fromIsUser || toIsUser) {
+      transfers.push({
+        type: "native",
+        hash: tx.hash.toLowerCase(),
+        from,
+        to,
+        value,
+        blockNumber: parseInt(ledger.ledger_index),
+        timestamp: parseInt(ledger.close_time),
+      });
+    }
+  }
+
+  return transfers.length > 0 ? { transfers, metadata } : null;
+}
+
+########################################################### SOLANA ###################################
+
+async function main(payload) {
+  const { data, metadata } = payload;
+  const transfers = [];
+
+  for (const blockData of data) {
+    const blockHeight = blockData.blockHeight;
+    const blockTime = blockData.blockTime;
+    const transactions = blockData.transactions || [];
+
+    for (const tx of transactions) {
+      const txSig = tx.transaction.signatures[0];
+      const instructions = tx.transaction.message.instructions || [];
+
+      for (const instr of instructions) {
+        if (instr.parsed && instr.program === "system" && instr.parsed.type === "transfer") {
+          const { source, destination, lamports } = instr.parsed.info;
+
+          const fromIsUser = await qnLib.qnContainsListItem("user_addresses", source.toLowerCase());
+          const toIsUser = await qnLib.qnContainsListItem("user_addresses", destination.toLowerCase());
+
+          if (fromIsUser || toIsUser) {
+            transfers.push({
+              type: "native",
+              hash: txSig,
+              from: source,
+              to: destination,
+              value: lamports.toString(),
+              blockNumber: blockHeight,
+              timestamp: blockTime,
+            });
+          }
+        }
+
+        if (instr.parsed && instr.program === "spl-token" && instr.parsed.type === "transferChecked") {
+          const { source, destination, mint, tokenAmount } = instr.parsed.info;
+
+          const sourceOwner = tx.meta.preTokenBalances.find(
+            b => b.accountIndex === tx.transaction.message.accountKeys.findIndex(k => k.pubkey === source)
+          )?.owner;
+
+          const destOwner = tx.meta.postTokenBalances.find(
+            b => b.accountIndex === tx.transaction.message.accountKeys.findIndex(k => k.pubkey === destination)
+          )?.owner;
+
+          const fromAddr = sourceOwner || source;
+          const toAddr = destOwner || destination;
+
+          const fromIsUser = await qnLib.qnContainsListItem("user_addresses", fromAddr.toLowerCase());
+          const toIsUser = await qnLib.qnContainsListItem("user_addresses", toAddr.toLowerCase());
+
+          if (fromIsUser || toIsUser) {
+            transfers.push({
+              type: "custom",
+              hash: txSig,
+              from: fromAddr,
+              to: toAddr,
+              token: mint,
+              value: tokenAmount.amount,
+              blockNumber: blockHeight,
+              timestamp: blockTime,
+            });
+          }
+        }
+
+      }
+    }
+  }
+
+  return transfers.length > 0 ? { transfers, metadata } : null;
+}

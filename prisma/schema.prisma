@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  username     String
+  email        String        @unique
+  password     String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  accounts     Account[]
+  balances     Balance[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  userId       String
+  chain        String        @db.VarChar(50)
+  address      String        @db.VarChar(255)
+  privateKey   String        @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balances     Balance[]
+  transactions Transaction[]
+
+  @@index([userId])
+  @@index([chain])
+  @@index([address])
+  @@map("accounts")
+}
+
+model Coin {
+  id               String        @id @default(cuid())
+  name             String        @db.VarChar(255)
+  symbol           String        @db.VarChar(50)
+  decimals         Int?
+  address          String?       @db.VarChar(255)
+  wrappedAddress   String        @db.VarChar(255)
+  withdrawFeeInUsd Float
+  chain            String        @db.VarChar(50)
+  isNative         Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  balances         Balance[]
+  transactions     Transaction[]
+
+  @@unique([symbol, chain])
+  @@index([address])
+  @@index([chain])
+  @@map("coins")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  accountId   String
+  coinId      String
+  type        String
+  chain       String
+  value       Float
+  fromAddress String   @db.VarChar(255)
+  toAddress   String   @db.VarChar(255)
+  txHash      String   @unique
+  blockNumber Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  coin        Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fromAddress])
+  @@index([toAddress])
+  @@index([txHash])
+  @@index([chain])
+  @@index([blockNumber])
+  @@index([userId])
+  @@index([accountId])
+  @@index([coinId])
+  @@map("transactions")
+}
+
+model Balance {
+  id        String   @id @default(cuid())
+  userId    String
+  accountId String
+  coinId    String
+  balance   Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  coin      Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, accountId, coinId])
+  @@index([userId])
+  @@index([accountId])
+  @@index([coinId])
+  @@map("balances")
+}
