@@ -20,5 +20,5 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ubuntu/Hot-Wallet
+            cd /home/ubuntu/
             ./deploy.sh
