@@ -1,10 +1,10 @@
-import { Injectable, Inject, forwardRef, Logger } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { EventsGateway } from 'src/events/events.gateway';
 import { BlockchainService } from 'src/blockchain/blockchain.service';
 import { DatabaseService } from 'src/database/database.service';
 import { TransactionType, EventType } from 'src/enums';
-import { Transaction } from '@prisma/client';
+import { WalletTransaction } from '@prisma/client';
 import { CryptoUtility } from 'src/utilities/crypto.utility';
 
 @Injectable()
@@ -17,8 +17,8 @@ export class TransactionsService {
     private readonly cryptoUtility: CryptoUtility
   ) { }
 
-  async create(createTxDto: CreateTransactionDto): Promise<Transaction> {
-    const existingTx = await this.databaseService.transaction.findFirst({
+  async create(createTxDto: CreateTransactionDto): Promise<WalletTransaction> {
+    const existingTx = await this.databaseService.walletTransaction.findFirst({
       where: {
         txHash: createTxDto.txHash,
         chain: createTxDto.chain,
@@ -27,7 +27,7 @@ export class TransactionsService {
 
     if (existingTx) return existingTx;
 
-    const createdTx = await this.databaseService.transaction.create({
+    const createdTx = await this.databaseService.walletTransaction.create({
       data: {
         userId: createTxDto.account.userId,
         accountId: createTxDto.account.id,
@@ -60,7 +60,7 @@ export class TransactionsService {
 
     // Update balance for user only
     if (createTxDto.account) {
-      const updatedBalance = await this.databaseService.balance.upsert({
+      const updatedBalance = await this.databaseService.walletBalance.upsert({
         where: {
           userId_accountId_coinId: {
             userId: createTxDto.account.userId,
@@ -91,8 +91,8 @@ export class TransactionsService {
     return createdTx;
   }
 
-  async getLatestTransactionByChain(chain: string): Promise<Transaction | null> {
-    const latestTransaction = await this.databaseService.transaction.findFirst({
+  async getLatestTransactionByChain(chain: string): Promise<WalletTransaction | null> {
+    const latestTransaction = await this.databaseService.walletTransaction.findFirst({
       where: {
         chain: chain,
         type: TransactionType.DEPOSIT,

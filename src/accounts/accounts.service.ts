@@ -4,7 +4,7 @@ import { DatabaseService } from '../database/database.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { CommonUtility } from '../utilities/common.utility';
 import { CryptoUtility } from '../utilities/crypto.utility';
-import { Account } from '@prisma/client';
+import { WalletAccount } from '@prisma/client';
 import { NetworkType, TransactionType } from 'src/enums';
 import { CreateUserAccountDto } from './dto/create-user-account.dto';
 
@@ -17,19 +17,11 @@ export class AccountsService {
     private cryptoUtility: CryptoUtility,
   ) { }
 
-  async create(createUserDto: CreateUserAccountDto): Promise<Account[]> {
+  async create(createUserDto: CreateUserAccountDto): Promise<WalletAccount[]> {
     const { userId } = createUserDto;
 
-    const user = await this.databaseService.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const existingAccountsCount = await this.databaseService.account.count({
-      where: { userId: user.id },
+    const existingAccountsCount = await this.databaseService.walletAccount.count({
+      where: { userId: userId },
     });
 
     if (existingAccountsCount > 0) {
@@ -42,35 +34,35 @@ export class AccountsService {
       const wallets = this.web3Service.createWallets();
 
       const accountData = (Object.entries(wallets) as [string, { address: string; privateKey: string }][]).map(([chain, wallet]) => ({
-        userId: user.id,
+        userId: userId,
         chain: chain as NetworkType,
         address: wallet.address,
         privateKey: this.cryptoUtility.encrypt(wallet.privateKey),
       }));
 
-      await prisma.account.createMany({
+      await prisma.walletAccount.createMany({
         data: accountData
       });
 
-      const userAccounts = await prisma.account.findMany({
-        where: { userId: user.id }
+      const userAccounts = await prisma.walletAccount.findMany({
+        where: { userId: userId }
       });
 
-      const coins = await prisma.coin.findMany();
+      const coins = await prisma.walletCoin.findMany();
 
 
       const balanceData = userAccounts.flatMap(account =>
         coins
           .filter(coin => coin.chain === account.chain)
           .map(coin => ({
-            userId: user.id,
+            userId: userId,
             accountId: account.id,
             coinId: coin.id,
             balance: 0,
           }))
       );
 
-      await prisma.balance.createMany({
+      await prisma.walletBalance.createMany({
         data: balanceData
       });
 
@@ -83,8 +75,8 @@ export class AccountsService {
     return createdAccounts;
   }
 
-  async findByAddressOnChain(address: string, chain: NetworkType): Promise<Account | null> {
-    return this.databaseService.account.findFirst({
+  async findByAddressOnChain(address: string, chain: NetworkType): Promise<WalletAccount | null> {
+    return this.databaseService.walletAccount.findFirst({
       where: {
         address: {
           equals: address,
@@ -96,7 +88,7 @@ export class AccountsService {
 
   async withdraw(withdrawDto: WithdrawAccountDto) {
 
-    const account = await this.databaseService.account.findUnique({
+    const account = await this.databaseService.walletAccount.findUnique({
       where: { id: withdrawDto.accountId }
     });
 
@@ -104,7 +96,7 @@ export class AccountsService {
       throw new NotFoundException('Account not found');
     }
 
-    const coin = await this.databaseService.coin.findUnique({
+    const coin = await this.databaseService.walletCoin.findUnique({
       where: { id: withdrawDto.coinId }
     });
 
@@ -112,7 +104,7 @@ export class AccountsService {
       throw new NotFoundException('Coin not found');
     }
 
-    const balance = await this.databaseService.balance.findUnique({
+    const balance = await this.databaseService.walletBalance.findUnique({
       where: { id: withdrawDto.balanceId },
     });
 
@@ -145,7 +137,7 @@ export class AccountsService {
       );
     }
 
-    await this.databaseService.transaction.create({
+    await this.databaseService.walletTransaction.create({
       data: {
         userId: account.userId,
         accountId: account.id,
@@ -160,7 +152,7 @@ export class AccountsService {
       },
     });
 
-    const updatedBalance = await this.databaseService.balance.update({
+      const updatedBalance = await this.databaseService.walletBalance.update({
       where: { id: withdrawDto.balanceId },
       data: {
         balance: {

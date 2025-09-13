@@ -7,7 +7,6 @@ export class CommonUtility {
     constructor(private configService: AppConfigService) { }
     private readonly userAddressesKey = "user_addresses";
 
-
     async listLists() {
         try {
             const response = await axios.get(
@@ -62,8 +61,8 @@ export class CommonUtility {
         }
     }
 
-    async listContainsItem( item: string) {
-        try {   
+    async listContainsItem(item: string) {
+        try {
             const response = await axios.get(
                 `https://api.quicknode.com/kv/rest/v1/lists/${encodeURIComponent(this.userAddressesKey)}/contains/${encodeURIComponent(item.toLowerCase())}`,
                 {

@@ -32,8 +32,6 @@ export const validationSchema = Joi.object({
   // BTC ENV
   BTC_ADMIN: Joi.string().required(),
   BTC_ADMIN_SK: Joi.string().required(),
-  BLOCKSTREAM_CLIENT: Joi.string().required(),
-  BLOCKSTREAM_SECRET: Joi.string().required(),
   BTC_RPC: Joi.string().uri().required(),
 });
 
@@ -75,8 +73,6 @@ export default () => ({
   btc: {
     admin: process.env.BTC_ADMIN!,
     adminSk: process.env.BTC_ADMIN_SK!,
-    blockstreamClient: process.env.BLOCKSTREAM_CLIENT!,
-    blockstreamSecret: process.env.BLOCKSTREAM_SECRET!,
     rpc:process.env.BTC_RPC!
   },
 });

@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { Coin } from '@prisma/client';
+import { WalletCoin } from '@prisma/client';
 
 @Injectable()
 export class CoinsService {
   constructor(private readonly databaseService: DatabaseService) { }
 
-  async findByAddressOnChain(address: string, chain: string): Promise<Coin | null> {
-    return this.databaseService.coin.findFirst({
+  async findByAddressOnChain(address: string, chain: string): Promise<WalletCoin | null> {
+    return this.databaseService.walletCoin.findFirst({
       where: {
         address: {
           equals: address,
@@ -17,8 +17,8 @@ export class CoinsService {
     });
   }
 
-  async findNative(chain: string, isNative = false): Promise<Coin | null> {
-    return this.databaseService.coin.findFirst({
+  async findNative(chain: string, isNative = false): Promise<WalletCoin | null> {
+    return this.databaseService.walletCoin.findFirst({
       where: {
         chain,
         isNative,

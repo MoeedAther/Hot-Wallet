@@ -210,7 +210,7 @@ async function main() {
 
     for (const coin of coins) {
         try {
-            await prisma.coin.upsert({
+            await prisma.walletCoin.upsert({
                 where: {
                     symbol_chain: {
                         symbol: coin.symbol,

@@ -1,8 +1,8 @@
-import { Account, Coin } from '@prisma/client';
+import { WalletAccount, WalletCoin } from '@prisma/client';
 import { NetworkType, TransactionType } from 'src/enums';
 export interface CreateTransactionDto {
-  account: Account,
-  coin: Coin,
+  account: WalletAccount,
+  coin: WalletCoin,
   type: TransactionType,
   fromAddress: string;
   toAddress: string;

@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Account {
+model WalletAccount {
   id           String        @id @default(cuid())
   userId       String
   chain        String        @db.VarChar(50)
@@ -15,8 +15,8 @@ model Account {
   privateKey   String        @db.Text
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  balances     Balance[]
-  transactions Transaction[]
+  balances     WalletBalance[]
+  transactions WalletTransaction[]
 
   @@index([userId])
   @@index([chain])
@@ -24,7 +24,7 @@ model Account {
   @@map("accounts")
 }
 
-model Coin {
+model WalletCoin {
   id               String        @id @default(cuid())
   name             String        @db.VarChar(255)
   symbol           String        @db.VarChar(50)
@@ -36,8 +36,8 @@ model Coin {
   isNative         Boolean       @default(false)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-  balances         Balance[]
-  transactions     Transaction[]
+  balances         WalletBalance[]
+  transactions     WalletTransaction[]
 
   @@unique([symbol, chain])
   @@index([address])
@@ -45,7 +45,7 @@ model Coin {
   @@map("coins")
 }
 
-model Transaction {
+model WalletTransaction {
   id          String   @id @default(cuid())
   userId      String
   accountId   String
@@ -59,8 +59,8 @@ model Transaction {
   blockNumber Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  coin        Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
+  account     WalletAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  coin        WalletCoin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
 
   @@index([fromAddress])
   @@index([toAddress])
@@ -73,7 +73,7 @@ model Transaction {
   @@map("transactions")
 }
 
-model Balance {
+model WalletBalance {
   id        String   @id @default(cuid())
   userId    String
   accountId String
@@ -81,8 +81,8 @@ model Balance {
   balance   Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  coin      Coin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
+  account   WalletAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  coin      WalletCoin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
 
   @@unique([userId, accountId, coinId])
   @@index([userId])
