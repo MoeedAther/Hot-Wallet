@@ -21,7 +21,7 @@ model WalletAccount {
   @@index([userId])
   @@index([chain])
   @@index([address])
-  @@map("accounts")
+  @@map("wallet_accounts")
 }
 
 model WalletCoin {
@@ -42,7 +42,7 @@ model WalletCoin {
   @@unique([symbol, chain])
   @@index([address])
   @@index([chain])
-  @@map("coins")
+  @@map("wallet_coins")
 }
 
 model WalletTransaction {
@@ -70,7 +70,7 @@ model WalletTransaction {
   @@index([userId])
   @@index([accountId])
   @@index([coinId])
-  @@map("transactions")
+  @@map("wallet_transactions")
 }
 
 model WalletBalance {
@@ -88,5 +88,5 @@ model WalletBalance {
   @@index([userId])
   @@index([accountId])
   @@index([coinId])
-  @@map("balances")
+  @@map("wallet_balances")
 }
