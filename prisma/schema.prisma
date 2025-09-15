@@ -8,13 +8,13 @@ datasource db {
 }
 
 model WalletAccount {
-  id           String        @id @default(cuid())
+  id           String              @id @default(cuid())
   userId       String
-  chain        String        @db.VarChar(50)
-  address      String        @db.VarChar(255)
-  privateKey   String        @db.Text
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  chain        String              @db.VarChar(50)
+  address      String              @db.VarChar(255)
+  privateKey   String              @db.Text
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
   balances     WalletBalance[]
   transactions WalletTransaction[]
 
@@ -25,17 +25,17 @@ model WalletAccount {
 }
 
 model WalletCoin {
-  id               String        @id @default(cuid())
-  name             String        @db.VarChar(255)
-  symbol           String        @db.VarChar(50)
+  id               String              @id @default(cuid())
+  name             String              @db.VarChar(255)
+  symbol           String              @db.VarChar(50)
   decimals         Int?
-  address          String?       @db.VarChar(255)
-  wrappedAddress   String        @db.VarChar(255)
+  address          String?             @db.VarChar(255)
+  wrappedAddress   String              @db.VarChar(255)
   withdrawFeeInUsd Float
-  chain            String        @db.VarChar(50)
-  isNative         Boolean       @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  chain            String              @db.VarChar(50)
+  isNative         Boolean             @default(false)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
   balances         WalletBalance[]
   transactions     WalletTransaction[]
 
@@ -46,21 +46,21 @@ model WalletCoin {
 }
 
 model WalletTransaction {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   userId      String
   accountId   String
   coinId      String
   type        String
   chain       String
   value       Float
-  fromAddress String   @db.VarChar(255)
-  toAddress   String   @db.VarChar(255)
-  txHash      String   @unique
+  fromAddress String        @db.VarChar(255)
+  toAddress   String        @db.VarChar(255)
+  txHash      String        @unique
   blockNumber Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  account     WalletAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  coin        WalletCoin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  account     WalletAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  coin        WalletCoin    @relation(fields: [coinId], references: [id], onDelete: Cascade)
 
   @@index([fromAddress])
   @@index([toAddress])
@@ -74,15 +74,15 @@ model WalletTransaction {
 }
 
 model WalletBalance {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   userId    String
   accountId String
   coinId    String
   balance   Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  account   WalletAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  coin      WalletCoin     @relation(fields: [coinId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  account   WalletAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  coin      WalletCoin    @relation(fields: [coinId], references: [id], onDelete: Cascade)
 
   @@unique([userId, accountId, coinId])
   @@index([userId])
