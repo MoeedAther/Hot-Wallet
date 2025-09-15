@@ -9,7 +9,8 @@ export class AccountsController {
 
   @Post('create')
   create(@Body() createDto: CreateUserAccountDto) {
-    return this.accountsService.create(createDto);
+    // return this.accountsService.create(createDto);
+    return createDto;
   }
 
   @Post('withdraw')
