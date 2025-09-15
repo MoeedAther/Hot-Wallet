@@ -1,10 +1,30 @@
-import { Controller, Get} from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
+import { CoinsService } from './coins/coins.service';
 
 @Controller()
 export class AppController {
+  constructor(private readonly coinsService: CoinsService) {}
+
   @Get()
   getHello(): string {
     return "Hello World!";
+  }
+
+  @Get('test/coins')
+  async getTestCoins() {
+    try {
+      const coins = await this.coinsService.findAll();
+      return {
+        success: true,
+        data: coins,
+        count: coins.length,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 
   // @Get('kv/lists')

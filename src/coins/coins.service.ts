@@ -25,4 +25,12 @@ export class CoinsService {
       },
     });
   }
+
+  async findAll(): Promise<WalletCoin[]> {
+    return this.databaseService.walletCoin.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
 }
