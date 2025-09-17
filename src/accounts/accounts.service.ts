@@ -20,6 +20,15 @@ export class AccountsService {
   async create(createUserDto: CreateUserAccountDto): Promise<WalletAccount[]> {
     const { userId } = createUserDto;
 
+      // NEW: Check if user exists in users table using raw SQL
+  const userExists = await this.databaseService.$queryRaw`
+    SELECT id FROM users WHERE id = ${userId}
+  `;
+
+   if (!userExists || (userExists as any[]).length === 0) {
+    throw new BadRequestException('User accounts already exist');
+  }
+
     const existingAccountsCount = await this.databaseService.walletAccount.count({
       where: { userId: userId },
     });
